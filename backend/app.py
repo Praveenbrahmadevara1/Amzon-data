@@ -27,6 +27,9 @@ def scrape_product_details_endpoint():
     try:
         data = request.get_json()
         product_urls = data.get("productUrls", [])
+        from scraper import MAX_BATCH_SIZE
+        if len(product_urls) > MAX_BATCH_SIZE:
+            return jsonify({"error": f"Too many URLs in one request (max {MAX_BATCH_SIZE})"}), 400
         details = scrape_product_details(product_urls)
         return jsonify(productDetails=details)
     except Exception as e:
