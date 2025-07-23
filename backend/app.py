@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from scraper import scrape_category_urls, scrape_product_details
 import os
+import re
 
 app = Flask(__name__)
 CORS(app, origins=["*"])
