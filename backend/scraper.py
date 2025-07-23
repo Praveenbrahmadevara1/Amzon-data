@@ -45,11 +45,41 @@ def scrape_product_details(product_urls):
             "Accept-Language": "en-US,en;q=0.9",
         }
         try:
-            resp = requests.get(url, headers=headers, timeout=15)
-            soup = BeautifulSoup(resp.text, "html.parser")
+            resp = requests.get(url, headers=headers, timeout=5)
+            if resp.status_code != 200:
+                print(f"Non-200 status for {url}: {resp.status_code}")
+                results.append({
+                    "url": url,
+                    "product_name": "N/A",
+                    "price": "N/A",
+                    "currency": "N/A"
+                })
+                continue
+            if len(resp.content) > 1_000_000:
+                print(f"Response too large for {url}")
+                results.append({
+                    "url": url,
+                    "product_name": "N/A",
+                    "price": "N/A",
+                    "currency": "N/A"
+                })
+                continue
+            html = resp.text
+            if ("Enter the characters you see below" in html or
+                "Type the characters you see in this image" in html or
+                "To discuss automated access to Amazon data" in html):
+                print(f"CAPTCHA/interstitial detected for {url}")
+                results.append({
+                    "url": url,
+                    "product_name": "BLOCKED",
+                    "price": "N/A",
+                    "currency": "N/A"
+                })
+                continue
+            soup = BeautifulSoup(html, "html.parser")
             # Title extraction
             title = None
-            for sel in ['#productTitle', '.product-title-word-break', 'h1.a-size-large', 'h1', 'meta[name="title"]', 'meta[property="og:title"]']:
+            for sel in ['#productTitle', '.product-title-word-break', 'h1.a-size-large', 'h1', 'meta[name=\"title\"]', 'meta[property=\"og:title\"]']:
                 el = soup.select_one(sel)
                 if el and el.get_text(strip=True):
                     title = el.get_text(strip=True)
@@ -76,7 +106,8 @@ def scrape_product_details(product_urls):
                 "price": price,
                 "currency": currency
             })
-        except Exception:
+        except Exception as e:
+            print(f"Error scraping {url}: {e}")
             results.append({
                 "url": url,
                 "product_name": "N/A",
