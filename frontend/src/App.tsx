@@ -18,6 +18,15 @@ function parseUrls(text: string): string[] {
     .filter(url => url.length > 0);
 }
 
+// Utility to chunk an array into batches
+function chunkArray<T>(array: T[], size: number): T[][] {
+  const result: T[][] = [];
+  for (let i = 0; i < array.length; i += size) {
+    result.push(array.slice(i, i + size));
+  }
+  return result;
+}
+
 const App: React.FC = () => {
   const [categoryInput, setCategoryInput] = useState('');
   const [categoryFileName, setCategoryFileName] = useState('');
@@ -174,36 +183,31 @@ const App: React.FC = () => {
     setLimit(val === '' ? '' : Math.max(1, parseInt(val)));
   };
 
-  // Scrape product details
+  // Scrape product details in batches
   const handleScrapeProductDetails = async () => {
     setDetailsScraping(true);
     setDetailsError(null);
     setDetailsProgress(0);
     setProductDetails([]);
     appendLog('Started scraping product details...');
-    const abortController = new AbortController();
-    productDetailsAbortRef.current = abortController;
+    const BATCH_SIZE = 10; // Must match backend limit
+    const batches = chunkArray(productUrls, BATCH_SIZE);
+    let allDetails: any[] = [];
     try {
-      const response = await axios.post(`${BACKEND_URL}/scrape-product-details`, {
-        productUrls,
-      }, {
-        onDownloadProgress: (progressEvent) => {
-          if (progressEvent.total) {
-            setDetailsProgress(Math.round((progressEvent.loaded / progressEvent.total) * 100));
-          }
-        },
-        signal: abortController.signal,
-      });
-      setProductDetails(response.data.productDetails || response.data);
-      appendLog(`Scraped details for ${response.data.productDetails?.length || response.data.length} products.`);
-    } catch (err: any) {
-      if (axios.isCancel(err) || err.code === 'ERR_CANCELED') {
-        setDetailsError('Scraping cancelled.');
-        appendLog('Scraping product details cancelled.');
-      } else {
-        setDetailsError(err.response?.data?.message || err.message || 'Failed to scrape product details.');
-        appendLog('Error scraping product details.');
+      for (let i = 0; i < batches.length; i++) {
+        const batch = batches[i];
+        appendLog(`Scraping batch ${i + 1} of ${batches.length}...`);
+        const response = await axios.post(`${BACKEND_URL}/scrape-product-details`, {
+          productUrls: batch,
+        });
+        allDetails = allDetails.concat(response.data.productDetails || response.data);
+        setDetailsProgress(Math.round(((i + 1) / batches.length) * 100));
       }
+      setProductDetails(allDetails);
+      appendLog(`Scraped details for ${allDetails.length} products.`);
+    } catch (err: any) {
+      setDetailsError(err.response?.data?.message || err.message || 'Failed to scrape product details.');
+      appendLog('Error scraping product details.');
     } finally {
       setDetailsScraping(false);
       setDetailsProgress(100);
