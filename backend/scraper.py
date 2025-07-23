@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 
-MAX_BATCH_SIZE = 100  # Allow up to 100 products per call
+MAX_BATCH_SIZE = 10  # Allow up to 10 products per call for stability
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -50,7 +50,7 @@ def scrape_product_details(product_urls):
     if len(product_urls) > MAX_BATCH_SIZE:
         return [{
             "url": None,
-            "product_name": "ERROR: Too many URLs in one request (max %d)" % MAX_BATCH_SIZE,
+            "product_name": f"ERROR: Too many URLs in one request (max {MAX_BATCH_SIZE})",
             "price": "N/A",
             "currency": "N/A"
         }]
