@@ -2,7 +2,7 @@ import requests
 from bs4 import BeautifulSoup
 import time
 
-MAX_BATCH_SIZE = 5  # Limit number of products per call
+MAX_BATCH_SIZE = 100  # Allow up to 100 products per call
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -47,7 +47,6 @@ def scrape_category_urls(category_urls, limit=100):
 
 def scrape_product_details(product_urls):
     results = []
-    MAX_SIZE = 200_000  # 200 KB
     if len(product_urls) > MAX_BATCH_SIZE:
         return [{
             "url": None,
@@ -59,15 +58,6 @@ def scrape_product_details(product_urls):
         try:
             resp = requests.get(url, headers=HEADERS, timeout=15)
             html = resp.text
-            if len(html) > MAX_SIZE:
-                print(f"Response too large for {url}")
-                results.append({
-                    "url": url,
-                    "product_name": "TOO_LARGE",
-                    "price": "N/A",
-                    "currency": "N/A"
-                })
-                continue
             if ("Enter the characters you see below" in html or
                 "Type the characters you see in this image" in html or
                 "To discuss automated access to Amazon data" in html):
@@ -92,12 +82,21 @@ def scrape_product_details(product_urls):
                     break
             if not title:
                 title = "N/A"
-            # Price extraction
+            # Price extraction (add more selectors for robustness)
             price = None
-            for sel in ['#priceblock_ourprice', '#priceblock_dealprice', '#priceblock_saleprice', '.a-price .a-offscreen']:
+            price_selectors = [
+                '#priceblock_ourprice', '#priceblock_dealprice', '#priceblock_saleprice',
+                '.a-price .a-offscreen', '.a-price .a-price-whole', '.a-price .a-price-fraction',
+                'span.a-price .a-offscreen', 'span.a-price-whole', 'span.a-price-fraction',
+                'meta[itemprop=price]', 'span[data-a-color=price] .a-offscreen'
+            ]
+            for sel in price_selectors:
                 el = soup.select_one(sel)
                 if el and el.get_text(strip=True):
                     price = el.get_text(strip=True)
+                    break
+                if el and el.has_attr('content'):
+                    price = el['content']
                     break
             if not price:
                 price = "N/A"
