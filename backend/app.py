@@ -11,7 +11,8 @@ CORS(app, origins=["*"])
 def scrape_product_urls_endpoint():
     data = request.get_json()
     category_urls = data.get("categoryUrls", [])
-    limit = data.get("limit", 10)
+    # Default limit is now 200
+    limit = data.get("limit", 200)
     product_urls = scrape_category_urls(category_urls, limit)
     return jsonify(productUrls=product_urls)
 
