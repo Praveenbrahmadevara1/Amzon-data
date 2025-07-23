@@ -9,7 +9,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import Collapse from '@mui/material/Collapse';
 import CloseIcon from '@mui/icons-material/Close';
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || 'https://amzon-data.onrender.com/';
 
 function parseUrls(text: string): string[] {
   return text
